@@ -19,18 +19,20 @@ const ApiKeyErrorScreen = () => (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
           <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
         </svg>
-        <h2 className="text-2xl font-bold mb-2">Erro de Configuração: Chave de API Ausente</h2>
+        <h2 className="text-2xl font-bold mb-2">Erro de Configuração: Chave de API Não Encontrada</h2>
         <p className="max-w-2xl mb-6">
-          Sua chave de API do Google Gemini não foi configurada corretamente para o ambiente de <strong>Produção</strong> na Vercel.
+          Para que a aplicação funcione, a chave de API precisa ser exposta ao navegador com um prefixo especial por motivos de segurança.
         </p>
         <div className="text-left bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h3 className="font-bold mb-3 text-gray-800 dark:text-white">Siga estes passos para corrigir:</h3>
+          <h3 className="font-bold mb-3 text-gray-800 dark:text-white">Para corrigir, siga estes passos na Vercel:</h3>
           <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
             <li>Acesse as configurações do seu projeto na Vercel.</li>
             <li>Vá em <strong>Settings &rarr; Environment Variables</strong>.</li>
-            <li>Encontre a variável <code>API_KEY</code> e clique para editar.</li>
-            <li className="font-bold text-red-600 dark:text-red-400">Certifique-se de que a caixa de seleção "Production" está marcada. Por padrão, às vezes apenas "Preview" e "Development" estão selecionados.</li>
-            <li>Salve as alterações e faça o "Redeploy" da sua aplicação na Vercel.</li>
+            <li className="font-bold text-red-600 dark:text-red-400">
+              Renomeie a variável de <code>API_KEY</code> para <code>VITE_API_KEY</code>.
+            </li>
+            <li>Certifique-se de que a caixa de seleção <strong>"Production"</strong> está marcada para esta variável.</li>
+            <li>Salve as alterações e faça o "Redeploy" da sua aplicação.</li>
           </ol>
         </div>
       </div>
@@ -40,7 +42,10 @@ const ApiKeyErrorScreen = () => (
 
 
 const App: React.FC = () => {
-  const isApiKeyMissing = !process.env.API_KEY;
+  // Use `import.meta.env.VITE_API_KEY` which is the standard way for Vite-based projects
+  // to expose environment variables to the client-side code.
+  const apiKey = import.meta.env.VITE_API_KEY;
+  const isApiKeyMissing = !apiKey;
 
   const [messages, setMessages] = useState<Message[]>([
       {
@@ -57,11 +62,10 @@ const App: React.FC = () => {
 
   const initializeChat = useCallback(async () => {
     if (isApiKeyMissing) {
-        // Error is now handled by the full-screen component
         return;
     }
     try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const ai = new GoogleGenAI({ apiKey });
         const model = isThinkingMode ? MODEL_PRO : MODEL_FLASH;
         const config = {
             systemInstruction: SYSTEM_INSTRUCTION,
@@ -77,7 +81,7 @@ const App: React.FC = () => {
         console.error(e);
         setError("Falha ao inicializar o chat. Verifique a chave de API e as configurações.");
     }
-  }, [isThinkingMode, isApiKeyMissing]);
+  }, [isThinkingMode, isApiKeyMissing, apiKey]);
 
   useEffect(() => {
     initializeChat();
