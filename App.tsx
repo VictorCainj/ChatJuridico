@@ -7,19 +7,46 @@ import { ChatInput } from './components/ChatInput';
 import { ArticleModal } from './components/ArticleModal';
 import { MODEL_FLASH, MODEL_PRO, SYSTEM_INSTRUCTION, legalDefinitions } from './constants';
 
+const ApiKeyErrorScreen = () => (
+  <div className="flex flex-col h-screen font-sans bg-gray-100 dark:bg-gray-900">
+    <header className="bg-white dark:bg-gray-800 shadow-md p-4">
+      <h1 className="text-2xl font-bold text-center text-gray-800 dark:text-white">
+        Consultor Jurídico Imobiliário AI
+      </h1>
+    </header>
+    <main className="flex-grow flex items-center justify-center">
+      <div className="text-center p-8 bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-200 rounded-lg shadow-lg max-w-3xl mx-auto">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mb-4 text-red-500 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <h2 className="text-2xl font-bold mb-2">Erro de Configuração: Chave de API Ausente</h2>
+        <p className="max-w-2xl mb-6">
+          Sua chave de API do Google Gemini não foi configurada corretamente para o ambiente de <strong>Produção</strong> na Vercel.
+        </p>
+        <div className="text-left bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+          <h3 className="font-bold mb-3 text-gray-800 dark:text-white">Siga estes passos para corrigir:</h3>
+          <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
+            <li>Acesse as configurações do seu projeto na Vercel.</li>
+            <li>Vá em <strong>Settings &rarr; Environment Variables</strong>.</li>
+            <li>Encontre a variável <code>API_KEY</code> e clique para editar.</li>
+            <li className="font-bold text-red-600 dark:text-red-400">Certifique-se de que a caixa de seleção "Production" está marcada. Por padrão, às vezes apenas "Preview" e "Development" estão selecionados.</li>
+            <li>Salve as alterações e faça o "Redeploy" da sua aplicação na Vercel.</li>
+          </ol>
+        </div>
+      </div>
+    </main>
+  </div>
+);
+
+
 const App: React.FC = () => {
   const isApiKeyMissing = !process.env.API_KEY;
 
   const [messages, setMessages] = useState<Message[]>([
-    isApiKeyMissing
-      ? {
-          role: Role.MODEL,
-          text: '## Erro de Configuração: Chave de API Ausente\n\nSua chave de API do Google Gemini não foi encontrada. Para que eu possa funcionar, por favor, siga estes passos:\n\n1.  **Obtenha sua chave de API** gratuita no [Google AI Studio](https://aistudio.google.com/).\n2.  **Configure na Vercel:** Vá para as configurações (Settings) do seu projeto na Vercel, encontre a seção "Environment Variables" e crie uma nova variável com o nome `API_KEY` e o valor da chave que você obteve.\n3.  **Redeploy:** Faça o "redeploy" da sua aplicação na Vercel para que a nova configuração seja aplicada.\n\nApós seguir estes passos, a aplicação funcionará corretamente.',
-        }
-      : {
+      {
           role: Role.MODEL,
           text: 'Olá! Sou seu assistente jurídico especializado na Lei do Inquilinato. Como posso ajudar sua imobiliária hoje?',
-        },
+      },
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isThinkingMode, setIsThinkingMode] = useState(false);
@@ -30,7 +57,7 @@ const App: React.FC = () => {
 
   const initializeChat = useCallback(async () => {
     if (isApiKeyMissing) {
-        setError("A chave de API do Gemini não está configurada.");
+        // Error is now handled by the full-screen component
         return;
     }
     try {
@@ -66,7 +93,6 @@ const App: React.FC = () => {
   const handleToggleThinkingMode = () => {
     if (isApiKeyMissing) return;
     setIsThinkingMode(prev => !prev);
-    // The useEffect hook with `initializeChat` will handle re-initialization
   };
 
   const handleShowArticle = (articleKey: string) => {
@@ -120,6 +146,10 @@ const App: React.FC = () => {
         setIsLoading(false);
     }
   };
+
+  if (isApiKeyMissing) {
+    return <ApiKeyErrorScreen />;
+  }
 
   return (
     <div className="flex flex-col h-screen font-sans bg-gray-100 dark:bg-gray-900">
