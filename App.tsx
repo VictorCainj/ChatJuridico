@@ -348,6 +348,7 @@ const App: React.FC = () => {
               isThinkingMode={isThinkingMode}
               onToggleThinkingMode={handleToggleThinkingMode}
               disabled={isApiKeyMissing}
+              onShowToast={showToast}
           />
         </footer>
 

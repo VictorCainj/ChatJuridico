@@ -1,5 +1,7 @@
 {
   "name": "Consultor Imobiliário AI",
   "description": "Um chatbot de IA para tirar dúvidas de imobiliárias sobre a Lei do Inquilinato e jurisprudência, fornecendo respostas rápidas ou análises aprofundadas com os modelos Gemini.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }
