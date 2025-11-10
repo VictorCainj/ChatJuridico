@@ -10,6 +10,7 @@ declare const DOMPurify: { sanitize: (html: string) => string };
 interface ChatMessageProps {
   message: Message;
   onShowArticle: (articleKey: string) => void;
+  onSaveDraft: (text: string) => void;
 }
 
 const UserIcon = () => (
@@ -178,7 +179,7 @@ const highlightLegalTerms = (html: string): string => {
 };
 
 
-export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onShowArticle }) => {
+export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onShowArticle, onSaveDraft }) => {
   const [isCopied, setIsCopied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const messageContainerRef = useRef<HTMLDivElement>(null);
@@ -222,16 +223,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onShowArticle
 
   const handleSaveDraft = () => {
     if (isSaved) return;
-    try {
-      const drafts = JSON.parse(localStorage.getItem('chat_drafts') || '[]');
-      const newDraft = { id: Date.now().toString(), text: message.text };
-      drafts.push(newDraft);
-      localStorage.setItem('chat_drafts', JSON.stringify(drafts));
-      setIsSaved(true);
-      setTimeout(() => setIsSaved(false), 2000);
-    } catch (err) {
-      console.error('Failed to save draft: ', err);
-    }
+    onSaveDraft(message.text);
+    setIsSaved(true);
+    setTimeout(() => setIsSaved(false), 2000);
   };
 
 
