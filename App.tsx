@@ -8,11 +8,18 @@ import { ArticleModal } from './components/ArticleModal';
 import { MODEL_FLASH, MODEL_PRO, SYSTEM_INSTRUCTION, legalDefinitions } from './constants';
 
 const App: React.FC = () => {
+  const isApiKeyMissing = !process.env.API_KEY;
+
   const [messages, setMessages] = useState<Message[]>([
-    {
-      role: Role.MODEL,
-      text: 'Olá! Sou seu assistente jurídico especializado na Lei do Inquilinato. Como posso ajudar sua imobiliária hoje?',
-    },
+    isApiKeyMissing
+      ? {
+          role: Role.MODEL,
+          text: '## Erro de Configuração: Chave de API Ausente\n\nSua chave de API do Google Gemini não foi encontrada. Para que eu possa funcionar, por favor, siga estes passos:\n\n1.  **Obtenha sua chave de API** gratuita no [Google AI Studio](https://aistudio.google.com/).\n2.  **Configure na Vercel:** Vá para as configurações (Settings) do seu projeto na Vercel, encontre a seção "Environment Variables" e crie uma nova variável com o nome `API_KEY` e o valor da chave que você obteve.\n3.  **Redeploy:** Faça o "redeploy" da sua aplicação na Vercel para que a nova configuração seja aplicada.\n\nApós seguir estes passos, a aplicação funcionará corretamente.',
+        }
+      : {
+          role: Role.MODEL,
+          text: 'Olá! Sou seu assistente jurídico especializado na Lei do Inquilinato. Como posso ajudar sua imobiliária hoje?',
+        },
   ]);
   const [isLoading, setIsLoading] = useState(false);
   const [isThinkingMode, setIsThinkingMode] = useState(false);
@@ -22,10 +29,11 @@ const App: React.FC = () => {
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
   const initializeChat = useCallback(async () => {
+    if (isApiKeyMissing) {
+        setError("A chave de API do Gemini não está configurada.");
+        return;
+    }
     try {
-        if (!process.env.API_KEY) {
-            throw new Error("API_KEY environment variable not set.");
-        }
         const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const model = isThinkingMode ? MODEL_PRO : MODEL_FLASH;
         const config = {
@@ -42,7 +50,7 @@ const App: React.FC = () => {
         console.error(e);
         setError("Falha ao inicializar o chat. Verifique a chave de API e as configurações.");
     }
-  }, [isThinkingMode]);
+  }, [isThinkingMode, isApiKeyMissing]);
 
   useEffect(() => {
     initializeChat();
@@ -56,6 +64,7 @@ const App: React.FC = () => {
   }, [messages]);
 
   const handleToggleThinkingMode = () => {
+    if (isApiKeyMissing) return;
     setIsThinkingMode(prev => !prev);
     // The useEffect hook with `initializeChat` will handle re-initialization
   };
@@ -74,6 +83,8 @@ const App: React.FC = () => {
 
 
   const handleSendMessage = async (userInput: string) => {
+    if (isApiKeyMissing) return;
+
     setIsLoading(true);
     setError(null);
     const userMessage: Message = { role: Role.USER, text: userInput };
@@ -83,7 +94,7 @@ const App: React.FC = () => {
         if (!chatRef.current) {
             await initializeChat();
             if (!chatRef.current) {
-                throw new Error("Chat not initialized after attempt.");
+                throw new Error("O chat não foi inicializado corretamente.");
             }
         }
 
@@ -149,6 +160,7 @@ const App: React.FC = () => {
             isLoading={isLoading}
             isThinkingMode={isThinkingMode}
             onToggleThinkingMode={handleToggleThinkingMode}
+            disabled={isApiKeyMissing}
         />
       </footer>
 
