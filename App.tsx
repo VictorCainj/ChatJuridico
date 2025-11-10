@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { GoogleGenAI, Chat } from '@google/genai';
 import { Message, Role } from './types';
@@ -6,7 +5,10 @@ import { ChatMessage } from './components/ChatMessage';
 import { ChatInput } from './components/ChatInput';
 import { ArticleModal } from './components/ArticleModal';
 import { MODEL_FLASH, MODEL_PRO, SYSTEM_INSTRUCTION, legalDefinitions } from './constants';
+import { ArticleSearch } from './components/ArticleSearch';
+import { ExamplePrompts } from './components/ExamplePrompts';
 
+// Fix: Updated the API key error screen to remove instructions for the user on how to set the API key, per coding guidelines.
 const ApiKeyErrorScreen = () => (
   <div className="flex flex-col h-screen font-sans bg-gray-100 dark:bg-gray-900">
     <header className="bg-white dark:bg-gray-800 shadow-md p-4">
@@ -21,20 +23,8 @@ const ApiKeyErrorScreen = () => (
         </svg>
         <h2 className="text-2xl font-bold mb-2">Erro de Configuração: Chave de API Não Encontrada</h2>
         <p className="max-w-2xl mb-6">
-          Para que a aplicação funcione, a chave de API precisa ser exposta ao navegador com um prefixo especial por motivos de segurança.
+          A aplicação não pode ser inicializada. A chave de API não está configurada.
         </p>
-        <div className="text-left bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-          <h3 className="font-bold mb-3 text-gray-800 dark:text-white">Para corrigir, siga estes passos na Vercel:</h3>
-          <ol className="list-decimal list-inside space-y-2 text-gray-700 dark:text-gray-300">
-            <li>Acesse as configurações do seu projeto na Vercel.</li>
-            <li>Vá em <strong>Settings &rarr; Environment Variables</strong>.</li>
-            <li className="font-bold text-red-600 dark:text-red-400">
-              Renomeie a variável de <code>API_KEY</code> para <code>VITE_API_KEY</code>.
-            </li>
-            <li>Certifique-se de que a caixa de seleção <strong>"Production"</strong> está marcada para esta variável.</li>
-            <li>Salve as alterações e faça o "Redeploy" da sua aplicação.</li>
-          </ol>
-        </div>
       </div>
     </main>
   </div>
@@ -42,9 +32,8 @@ const ApiKeyErrorScreen = () => (
 
 
 const App: React.FC = () => {
-  // Use `import.meta.env.VITE_API_KEY` which is the standard way for Vite-based projects
-  // to expose environment variables to the client-side code.
-  const apiKey = import.meta.env.VITE_API_KEY;
+  // Fix: Use `process.env.API_KEY` as required by the coding guidelines. This resolves the TypeScript error for `import.meta.env`.
+  const apiKey = process.env.API_KEY;
   const isApiKeyMissing = !apiKey;
 
   const [messages, setMessages] = useState<Message[]>([
@@ -103,7 +92,8 @@ const App: React.FC = () => {
     const definition = legalDefinitions[articleKey];
     if (definition) {
       const formattedTitle = articleKey.replace('art. ', 'Artigo ').replace('º','');
-      setModalArticle({ title: formattedTitle.toUpperCase(), content: definition });
+      const content = (typeof definition === 'object' && 'fullText' in definition) ? definition.fullText : String(definition);
+      setModalArticle({ title: formattedTitle.toUpperCase(), content: content });
     }
   };
 
@@ -157,13 +147,18 @@ const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen font-sans bg-gray-100 dark:bg-gray-900">
-      <header className="bg-white dark:bg-gray-800 shadow-md p-4">
-        <h1 className="text-2xl font-bold text-center text-gray-800 dark:text-white">
-          Consultor Jurídico Imobiliário AI
-        </h1>
-        <p className="text-center text-sm text-gray-500 dark:text-gray-400">
-          Potencializado por Gemini
-        </p>
+      <header className="bg-white dark:bg-gray-800 shadow-md p-4 z-10">
+        <div className="max-w-3xl mx-auto space-y-4">
+            <div>
+                <h1 className="text-2xl font-bold text-center text-gray-800 dark:text-white">
+                Consultor Jurídico Imobiliário AI
+                </h1>
+                <p className="text-center text-sm text-gray-500 dark:text-gray-400">
+                Potencializado por Gemini
+                </p>
+            </div>
+            <ArticleSearch onShowArticle={handleShowArticle} />
+        </div>
       </header>
       
       <main ref={chatContainerRef} className="flex-grow p-4 overflow-y-auto">
@@ -171,6 +166,7 @@ const App: React.FC = () => {
             {messages.map((msg, index) => (
                 <ChatMessage key={index} message={msg} onShowArticle={handleShowArticle} />
             ))}
+            {messages.length === 1 && !isLoading && <ExamplePrompts onPromptClick={handleSendMessage} />}
             {isLoading && messages[messages.length - 1].role === Role.USER && (
                  <div className="flex items-start gap-3 my-4 justify-start">
                     <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gray-500">

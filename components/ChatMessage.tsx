@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Message, Role } from '../types';
 import { legalDefinitions } from '../constants';
@@ -111,19 +112,37 @@ const highlightLegalTerms = (html: string): string => {
           termStrong.textContent = match;
 
           const tooltip = document.createElement('span');
-          tooltip.className = 'absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-72 p-3 text-sm font-normal text-white bg-gray-800 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none whitespace-pre-line';
+          tooltip.className = 'absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max max-w-lg p-3 text-sm font-normal text-white bg-gray-800 rounded-lg shadow-lg opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-10 pointer-events-none whitespace-pre-line';
           
-          // Show summary in tooltip, especially for long articles
-          const summary = definition.length > 150 ? definition.substring(0, 150) + '...' : definition;
-          tooltip.textContent = summary;
+          const tooltipContent = (typeof definition === 'object' && 'summary' in definition) ? definition.summary : String(definition);
+          tooltip.textContent = tooltipContent;
 
           if (isArticle) {
-            const link = document.createElement('a');
-            link.href = '#';
-            link.textContent = 'Ver texto completo';
-            link.className = 'block mt-2 font-medium text-blue-400 hover:underline cursor-pointer pointer-events-auto';
-            link.dataset.articleKey = normalizedMatch;
-            tooltip.appendChild(link);
+            const linksContainer = document.createElement('div');
+            linksContainer.className = 'mt-2 flex items-center gap-2 pointer-events-auto';
+
+            const modalLink = document.createElement('a');
+            modalLink.href = '#';
+            modalLink.textContent = 'Ver texto completo';
+            modalLink.className = 'font-medium text-blue-400 hover:underline cursor-pointer';
+            modalLink.dataset.articleKey = normalizedMatch;
+            linksContainer.appendChild(modalLink);
+            
+            const separator = document.createElement('span');
+            separator.className = 'text-gray-500';
+            separator.textContent = '|';
+            linksContainer.appendChild(separator);
+
+            const googleLink = document.createElement('a');
+            const query = `Lei do Inquilinato ${normalizedMatch.replace('art. ', 'Artigo ')}`;
+            googleLink.href = `https://www.google.com/search?q=${encodeURIComponent(query)}`;
+            googleLink.target = '_blank';
+            googleLink.rel = 'noopener noreferrer';
+            googleLink.textContent = 'Buscar fonte';
+            googleLink.className = 'font-medium text-blue-400 hover:underline cursor-pointer';
+            linksContainer.appendChild(googleLink);
+
+            tooltip.appendChild(linksContainer);
           }
 
           tooltipWrapper.appendChild(termStrong);
@@ -225,6 +244,50 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onShowArticle
     }
     return null;
   }, [message.text, isUser]);
+
+  useEffect(() => {
+    if (isUser || !messageContainerRef.current) {
+        return;
+    }
+
+    const preElements = messageContainerRef.current.querySelectorAll('.prose pre');
+
+    preElements.forEach((pre) => {
+        if (pre.parentElement?.classList.contains('group/code-block')) {
+            return; // Already has a copy button
+        }
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'relative group/code-block';
+
+        const copyButton = document.createElement('button');
+        copyButton.className = 'absolute top-2 right-2 p-1.5 rounded-md bg-gray-800/60 text-gray-200 opacity-0 group-hover/code-block:opacity-100 transition-opacity hover:bg-gray-700/80 focus:outline-none focus:ring-2 focus:ring-blue-400';
+        copyButton.title = 'Copiar código';
+        copyButton.ariaLabel = 'Copiar código';
+
+        const copyIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>`;
+        const checkIcon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>`;
+
+        copyButton.innerHTML = copyIcon;
+
+        copyButton.onclick = () => {
+            // Fix: Cast the result of querySelector to HTMLElement to access innerText.
+            const code = (pre.querySelector('code') as HTMLElement)?.innerText ?? pre.innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                copyButton.innerHTML = checkIcon;
+                setTimeout(() => {
+                    copyButton.innerHTML = copyIcon;
+                }, 2000);
+            }).catch(err => {
+                console.error('Failed to copy code: ', err);
+            });
+        };
+
+        pre.parentNode?.insertBefore(wrapper, pre);
+        wrapper.appendChild(pre);
+        wrapper.appendChild(copyButton);
+    });
+  }, [markup, isUser]);
   
   return (
     <div className={`flex items-start gap-3 my-4 ${containerClasses}`}>
@@ -233,9 +296,9 @@ export const ChatMessage: React.FC<ChatMessageProps> = ({ message, onShowArticle
           <BotIcon />
         </div>
       )}
-      <div ref={messageContainerRef} className={`relative group p-4 max-w-lg shadow-md ${messageClasses}`}>
+      <div ref={messageContainerRef} className={`relative group/message p-4 max-w-lg shadow-md ${messageClasses}`}>
          {!isUser && (
-           <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+           <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover/message:opacity-100 transition-opacity duration-300">
              <button
                 onClick={handleSaveDraft}
                 className="p-1.5 rounded-full text-gray-500 dark:text-gray-400 hover:bg-black/10 dark:hover:bg-white/10"
